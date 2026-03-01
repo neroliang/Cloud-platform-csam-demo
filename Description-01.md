@@ -1,4 +1,3 @@
-
 Continuously identifying, tracking, and managing multi-cloud assets within an organization to protect them from security threats. 
 
 maintaining an up-to-date inventory of cloud resources, monitoring their configuration/provisioning
@@ -31,3 +30,13 @@ Visual Presentation
 
 Either by dashboard or command terminal (Web portal dashboard get defined by SQL/HCL)
 Visual: A simple red/green light for each policy rule
+
+
+
+Sometimes, we may see multiple, overlapping policy standards get used in some platform, which often incur duplicate alerts or non-compliance reports;  
+For Business Impact: "Alert Fatigue" leads to critical security warnings being ignored.  Decision-makers lack a "Single Source of Truth" or single standard to gauge overall security posture.
+
+Multiple Cloud platform policies doubles up efforts of monitoring compliance and maintaining policy definition up-to-date.
+
+Relying "point-in-time" snapshots of policy compliance data, cause losing insights on how Cloud engineer/platform team is making continusous improvement/optimization
+
