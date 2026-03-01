@@ -32,11 +32,11 @@ Either by dashboard or command terminal (Web portal dashboard get defined by SQL
 Visual: A simple red/green light for each policy rule
 
 
+In Azure, "Legacy" or "Auto-Assigned" Policies labeled as being "assigned by Security Center."
+Microsoft Defender for Cloud (ASC) Policies: It’s what you see when you go into the "Defender for Cloud" (formerly Azure Security Center) dashboard.
+General standard based Polciy (NZISM Policies, NIST, and other Azure native polices) You might encounter with duplicate reports or alerts because of the same issue. Decision-makers lack a "Single Source of Truth" or single standard, looking at too much data but not enough baseline, it is easy to misjudge the overall cloud security posture.
 
-Sometimes, we may see multiple, overlapping policy standards get used in some platform, which often incur duplicate alerts or non-compliance reports;  
-For Business Impact: "Alert Fatigue" leads to critical security warnings being ignored.  Decision-makers lack a "Single Source of Truth" or single standard to gauge overall security posture.
+Managing every cloud’s policy individually is a massive drain on time. if we have a single source of truth and holistic view, we can stop being reactive and actually focus on moving the needle on our SLAs of key services.
 
-Multiple Cloud platform policies doubles up efforts of monitoring compliance and maintaining policy definition up-to-date.
-
-Relying "point-in-time" snapshots of policy compliance data, cause losing insights on how Cloud engineer/platform team is making continusous improvement/optimization
+Plus, if we only look at one-off snapshots of compliance, we lose the 'big picture' of how much work the team is putting into continuous optimization."
 
