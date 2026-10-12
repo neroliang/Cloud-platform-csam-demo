@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "receiptId": "cfda02bb-209d-44f7-9b7f-a108a363c289",
+  "status": "current",
+  "command": "deliver",
+  "type": "architecture",
+  "input": "/Users/charlotte/Code/aidev/terravision/.archify/architecture-3-tier-web-app-20261002-225442/candidate.json",
+  "output": "/Users/charlotte/Code/aidev/terravision/.archify/architecture-3-tier-web-app-20261002-225442/three-tier-web-app.html",
+  "specification": {
+    "sha256": "dcfb7716f248e50f29780b2f70184abc9efed9b087682170564bb097c95fb632",
+    "bytes": 4359
+  },
+  "artifact": {
+    "sha256": "6dd7daab3de46d4159c3b769e76b5d8a0a6d857199ecfb6b2b0cf173b0af1913",
+    "bytes": 769735
+  }
+}

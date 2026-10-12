@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Three-Tier Web Application — Reference Architecture",
+    "output": ".archify/architecture-3-tier-web-app-20261002-225442/three-tier-web-app.html",
+    "quality_profile": "showcase"
+  },
+  "components": [
+    { "id": "users", "type": "external", "label": "Users", "sublabel": "browser & mobile", "pos": [40, 300], "size": [120, 60] },
+    { "id": "cdn", "type": "cloud", "label": "CDN / Edge", "sublabel": "TLS termination", "pos": [230, 300], "size": [120, 60] },
+    { "id": "lb", "type": "cloud", "label": "Load Balancer", "sublabel": "HTTPS :443", "pos": [420, 300], "size": [130, 60] },
+    { "id": "web", "type": "frontend", "label": "Web Frontend", "sublabel": "SSR / SPA", "pos": [640, 300], "size": [130, 60] },
+    { "id": "api", "type": "backend", "label": "API Server", "sublabel": "REST :8080", "pos": [880, 300], "size": [130, 64] },
+    { "id": "db", "type": "database", "label": "Primary Database", "sublabel": "engine TBD", "pos": [1120, 300], "size": [130, 60] },
+    { "id": "cache", "type": "database", "label": "Cache", "sublabel": "in-memory", "pos": [820, 490], "size": [130, 60] },
+    { "id": "queue", "type": "messagebus", "label": "Job Queue", "sublabel": "async", "pos": [1030, 490], "size": [130, 60] },
+    { "id": "worker", "type": "backend", "label": "Background Worker", "sublabel": "async jobs", "pos": [1280, 490], "size": [130, 60] },
+    { "id": "objects", "type": "cloud", "label": "Object Storage", "sublabel": "media & static", "pos": [215, 490], "size": [150, 60] },
+    { "id": "auth", "type": "security", "label": "Auth Service", "sublabel": "protocol TBD", "pos": [875, 120], "size": [140, 64] },
+    { "id": "thirdparty", "type": "external", "label": "Third-party APIs", "sublabel": "providers TBD", "pos": [1265, 650], "size": [160, 60] }
+  ],
+  "boundaries": [
+    { "kind": "region", "label": "Hosted Environment (provider & region TBD)", "wraps": ["cdn", "lb", "web", "api", "cache", "db", "queue", "worker", "objects"] },
+    { "kind": "security-group", "label": "App-tier Security Group (rules TBD)", "wraps": ["lb", "web", "api"] }
+  ],
+  "connections": [
+    { "id": "users-to-cdn", "from": "users", "to": "cdn", "label": "HTTPS", "variant": "emphasis" },
+    { "id": "cdn-to-lb", "from": "cdn", "to": "lb" },
+    { "id": "lb-to-web", "from": "lb", "to": "web" },
+    { "id": "web-to-api", "from": "web", "to": "api", "label": "API calls" },
+    { "id": "api-to-db", "from": "api", "to": "db", "label": "SQL" },
+    { "id": "cdn-to-objects", "from": "cdn", "to": "objects", "label": "static assets", "variant": "dashed", "fromSide": "bottom", "toSide": "top" },
+    { "id": "auth-to-api", "from": "auth", "to": "api", "label": "verify token (TBD)", "variant": "security", "fromSide": "bottom", "toSide": "top" },
+    { "id": "api-to-cache", "from": "api", "to": "cache", "label": "read-through", "fromSide": "bottom", "toSide": "top" },
+    { "id": "api-to-queue", "from": "api", "to": "queue", "label": "enqueue", "variant": "dashed", "fromSide": "bottom", "toSide": "top" },
+    { "id": "queue-to-worker", "from": "queue", "to": "worker" },
+    { "id": "worker-to-thirdparty", "from": "worker", "to": "thirdparty", "label": "calls (TBD)", "variant": "dashed", "fromSide": "bottom", "toSide": "top" }
+  ],
+  "cards": [
+    { "dot": "cyan", "title": "Edge & Presentation", "items": ["Users reach the app over HTTPS through a CDN", "Static assets and media served from object storage", "CDN origin fetches forward to the load balancer"] },
+    { "dot": "emerald", "title": "Application Tier", "items": ["Load-balanced web frontend calls the API server", "API reads and writes the primary database (SQL)", "Read-through cache shields the database", "Workers drain async jobs from the queue"] },
+    { "dot": "rose", "title": "Security Boundary", "items": ["Auth service issues and verifies tokens (protocol TBD)", "App tier isolated in a security group"] },
+    { "dot": "slate", "title": "Unknowns (marked TBD)", "items": ["Cloud provider, region, and network topology", "Database engine and schema", "Cache technology, TTL, and eviction policy", "Queue technology and delivery guarantees", "Auth protocol (OAuth 2.0 / OIDC / SAML / session)", "Third-party providers and integrations", "Scale targets and SLOs"] }
+  ]
+}
