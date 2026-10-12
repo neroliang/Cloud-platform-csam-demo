@@ -1,0 +1,108 @@
+{
+  "metadata": {
+    "source": "ServiceNow CMDB + Azure Resource Graph",
+    "provider": "azure",
+    "region": "eastus",
+    "environment": "Production",
+    "root": "rg-orders-prod",
+    "generated_at": "2026-11-10T00:00:00Z"
+  },
+  "graph_nodes": [
+    {
+      "id": "rg-orders-prod",
+      "labels": ["ResourceGroup"],
+      "properties": {
+        "name": "Orders Platform (Prod)",
+        "environment": "Production",
+        "provider": "azure",
+        "region": "eastus"
+      }
+    },
+    {
+      "id": "snet-workloads-01",
+      "labels": ["Subnet"],
+      "properties": {
+        "name": "snet-workloads-01",
+        "cidr": "10.0.2.0/24",
+        "nsg": "nsg-workloads"
+      },
+      "parent": "rg-orders-prod"
+    },
+    {
+      "id": "ci-web-01",
+      "labels": ["ConfigurationItem"],
+      "properties": {
+        "sys_id": "sys_001",
+        "name": "web-server-01.prod",
+        "ci_class": "cmdb_ci_linux_server",
+        "status": "healthy",
+        "ip": "10.0.2.10",
+        "metrics": { "cpu": 34, "memory": 58, "latency_ms": 1.2 }
+      },
+      "parent": "snet-workloads-01"
+    },
+    {
+      "id": "ci-lb-01",
+      "labels": ["ConfigurationItem"],
+      "properties": {
+        "sys_id": "sys_002",
+        "name": "alb-orders-01",
+        "ci_class": "cmdb_ci_lb",
+        "status": "warning",
+        "ip": "10.0.2.5",
+        "metrics": { "cpu": 61, "memory": 44, "latency_ms": 32.4, "incidents": 2 }
+      },
+      "parent": "snet-workloads-01"
+    },
+    {
+      "id": "ci-db-01",
+      "labels": ["ConfigurationItem"],
+      "properties": {
+        "sys_id": "sys_003",
+        "name": "pg-primary-01",
+        "ci_class": "cmdb_ci_db_instance",
+        "status": "error",
+        "ip": "10.0.3.15",
+        "metrics": { "cpu": 98, "memory": 91, "latency_ms": 145.0, "incidents": 5 }
+      },
+      "parent": "rg-orders-prod"
+    },
+    {
+      "id": "ci-store-01",
+      "labels": ["ConfigurationItem"],
+      "properties": {
+        "sys_id": "sys_004",
+        "name": "ordersblob01",
+        "ci_class": "cmdb_ci_cloud_service",
+        "provider": "azure",
+        "resource_type": "Microsoft.Storage/storageAccounts",
+        "status": "healthy",
+        "metrics": { "throughput_mbps": 320, "latency_ms": 3.4 }
+      },
+      "parent": "rg-orders-prod"
+    }
+  ],
+  "graph_relationships": [
+    {
+      "id": "rel-01",
+      "source": "ci-lb-01",
+      "target": "ci-web-01",
+      "type": "ROUTES_TO",
+      "properties": { "protocol": "HTTP/8080", "category": "traffic", "traffic_rate": "high" }
+    },
+    {
+      "id": "rel-02",
+      "source": "ci-web-01",
+      "target": "ci-db-01",
+      "type": "DEPENDS_ON",
+      "properties": { "protocol": "TCP/5432", "category": "dependency", "traffic_rate": "high", "severity": "critical" }
+    },
+    {
+      "id": "rel-03",
+      "source": "ci-web-01",
+      "target": "ci-store-01",
+      "type": "READS_FROM",
+      "properties": { "protocol": "HTTPS/443", "category": "dependency" }
+    }
+  ]
+}

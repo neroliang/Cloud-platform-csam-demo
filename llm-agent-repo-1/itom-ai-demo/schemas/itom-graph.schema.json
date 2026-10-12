@@ -1,0 +1,99 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/schemas/itom-graph.schema.json",
+  "title": "ITOM Infrastructure Graph",
+  "description": "Normalised input consumed by the itom-topology-flow skill.",
+  "type": "object",
+  "required": ["graph_nodes", "graph_relationships"],
+  "additionalProperties": false,
+  "properties": {
+    "metadata": { "$ref": "#/$defs/metadata" },
+    "graph_nodes": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/node" }
+    },
+    "graph_relationships": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/relationship" }
+    }
+  },
+  "$defs": {
+    "metadata": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "source": { "type": "string" },
+        "provider": { "enum": ["azure", "aws", "oci", "onprem", "multi"] },
+        "region": { "type": "string" },
+        "environment": { "type": "string" },
+        "root": { "type": "string" },
+        "generated_at": { "type": "string", "format": "date-time" }
+      }
+    },
+    "status": { "enum": ["healthy", "warning", "error"] },
+    "metrics": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "cpu": { "type": "number", "minimum": 0, "maximum": 100 },
+        "memory": { "type": "number", "minimum": 0, "maximum": 100 },
+        "latency_ms": { "type": "number", "minimum": 0 },
+        "throughput_mbps": { "type": "number", "minimum": 0 },
+        "incidents": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "properties": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "name": { "type": "string" },
+        "ci_class": { "type": "string" },
+        "sys_class_name": { "type": "string" },
+        "status": { "$ref": "#/$defs/status" },
+        "metrics": { "$ref": "#/$defs/metrics" },
+        "ip": { "type": "string" },
+        "fqdn": { "type": "string" },
+        "provider": { "type": "string" },
+        "region": { "type": "string" },
+        "resource_type": { "type": "string" },
+        "cidr": { "type": "string" },
+        "icon": { "type": "string" },
+        "details": { "type": "string" }
+      }
+    },
+    "node": {
+      "type": "object",
+      "required": ["id", "properties"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "labels": { "type": "array", "items": { "type": "string" } },
+        "properties": { "$ref": "#/$defs/properties" },
+        "parent": { "type": "string" }
+      }
+    },
+    "relationship": {
+      "type": "object",
+      "required": ["id", "source", "target", "type"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "source": { "type": "string", "minLength": 1 },
+        "target": { "type": "string", "minLength": 1 },
+        "type": { "type": "string", "minLength": 1 },
+        "properties": {
+          "type": "object",
+          "additionalProperties": true,
+          "properties": {
+            "protocol": { "type": "string" },
+            "category": {
+              "enum": ["dependency", "traffic", "impact", "secure", "replication"]
+            },
+            "traffic_rate": { "enum": ["low", "medium", "high"] },
+            "severity": { "enum": ["info", "warning", "critical"] }
+          }
+        }
+      }
+    }
+  }
+}

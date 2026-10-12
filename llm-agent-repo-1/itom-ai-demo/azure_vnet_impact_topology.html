@@ -1,0 +1,676 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-slate-950 text-slate-100">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Azure VNet Topology - VNet Integration & Private Endpoints</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+    }
+    .font-mono-code {
+      font-family: 'Fira Code', monospace;
+    }
+
+    /* Grid background effect */
+    .bg-azure-grid {
+      background-size: 36px 36px;
+      background-image: 
+        linear-gradient(to right, rgba(14, 165, 233, 0.04) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(14, 165, 233, 0.04) 1px, transparent 1px);
+    }
+
+    /* Animated dashed link flow */
+    @keyframes dash-flow {
+      from { stroke-dashoffset: 32; }
+      to { stroke-dashoffset: 0; }
+    }
+
+    .edge-animated {
+      stroke-dasharray: 8, 6;
+      animation: dash-flow linear infinite;
+    }
+
+    /* Pulsing status ring animations */
+    @keyframes pulse-warning {
+      0% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.6); }
+      70% { box-shadow: 0 0 0 14px rgba(245, 158, 11, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); }
+    }
+
+    @keyframes pulse-error {
+      0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+      70% { box-shadow: 0 0 0 16px rgba(239, 68, 68, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+    }
+
+    .node-pulse-warning { animation: pulse-warning 2s infinite ease-out; }
+    .node-pulse-error { animation: pulse-error 1.5s infinite ease-out; }
+
+    /* Glassmorphic elements */
+    .glass-azure {
+      background: rgba(15, 23, 42, 0.82);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(56, 189, 248, 0.18);
+    }
+
+    .glass-integration {
+      background: rgba(24, 16, 43, 0.85);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(217, 70, 239, 0.3);
+    }
+
+    /* Slide transition for Inspector */
+    .slide-panel {
+      transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    /* Glow highlights */
+    .glow-azure { box-shadow: 0 0 20px -3px rgba(14, 165, 233, 0.35); }
+    .glow-appservice { box-shadow: 0 0 20px -3px rgba(217, 70, 239, 0.4); }
+  </style>
+</head>
+<body class="h-full bg-slate-950 text-slate-100 flex flex-col overflow-hidden select-none">
+
+  <header class="h-16 border-b border-slate-800/90 bg-slate-900/90 backdrop-blur px-6 flex items-center justify-between z-20">
+    <div class="flex items-center space-x-3">
+      <div class="h-10 w-10 rounded-xl bg-fuchsia-500/10 border border-fuchsia-500/30 flex items-center justify-center text-fuchsia-400 glow-appservice">
+        <i class="fa-solid fa-diagram-project text-lg"></i>
+      </div>
+      <div>
+        <div class="flex items-center space-x-2">
+          <h1 class="font-semibold text-sm tracking-wide text-slate-100">Azure VNet Integration & Private Link Topology</h1>
+          <span class="text-[10px] font-mono-code bg-fuchsia-500/10 text-fuchsia-300 px-2 py-0.5 rounded border border-fuchsia-500/20">Outbound + Inbound Flows</span>
+        </div>
+        <p class="text-xs text-slate-400">App Service Subnet Delegation & Private Endpoint Impact Mapping</p>
+      </div>
+    </div>
+
+    <!-- Action Toolbar Controls -->
+    <div class="flex items-center space-x-3">
+      <!-- Filter Modes -->
+      <div class="flex items-center bg-slate-950/80 border border-slate-800 rounded-xl p-1 text-xs">
+        <button id="filterAll" class="filter-btn px-3 py-1 rounded-lg bg-sky-500/20 text-sky-300 font-medium border border-sky-500/30">All Paths</button>
+        <button id="filterOutbound" class="filter-btn px-3 py-1 rounded-lg text-slate-400 hover:text-slate-200 transition">Outbound Integration</button>
+        <button id="filterPrivateLink" class="filter-btn px-3 py-1 rounded-lg text-slate-400 hover:text-slate-200 transition">Private Endpoints</button>
+      </div>
+
+      <div class="flex items-center bg-slate-950/70 border border-slate-800 rounded-xl p-1.5 px-3 space-x-2 text-xs">
+        <span class="text-slate-400"><i class="fa-solid fa-gauge-high text-sky-400 mr-1"></i> Flow:</span>
+        <input id="speedSlider" type="range" min="0.5" max="3" step="0.5" value="1" class="w-20 accent-sky-400 cursor-pointer">
+        <span id="speedValue" class="font-mono-code text-sky-400 w-8 text-right">1.0x</span>
+      </div>
+
+      <button id="btnToggleIncident" class="px-3 py-2 rounded-xl text-xs font-medium border border-amber-500/30 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 transition flex items-center space-x-1.5">
+        <i class="fa-solid fa-triangle-exclamation text-amber-400"></i>
+        <span>Simulate NSG Block</span>
+      </button>
+
+      <button id="btnReset" class="px-3 py-2 rounded-xl text-xs font-medium border border-slate-700 bg-slate-800 hover:bg-slate-700 text-slate-200 transition">
+        <i class="fa-solid fa-rotate-right mr-1"></i> Reset
+      </button>
+    </div>
+  </header>
+
+  <div class="flex-1 relative overflow-hidden bg-azure-grid flex">
+    
+    <!-- Viewport Area -->
+    <div id="viewport" class="flex-1 relative h-full w-full overflow-hidden">
+      
+      <!-- SVG Overlay for Dynamic Bezier Paths & Animated Flow Markers -->
+      <svg id="svgOverlay" class="absolute inset-0 w-full h-full pointer-events-none z-10">
+        <defs>
+          <!-- Arrow Markers -->
+          <marker id="arrow-sky" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M 0 0 L 10 5 L 0 10 z" fill="#38bdf8" />
+          </marker>
+          <marker id="arrow-fuchsia" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M 0 0 L 10 5 L 0 10 z" fill="#d946ef" />
+          </marker>
+          <marker id="arrow-amber" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M 0 0 L 10 5 L 0 10 z" fill="#f59e0b" />
+          </marker>
+          <marker id="arrow-red" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M 0 0 L 10 5 L 0 10 z" fill="#ef4444" />
+          </marker>
+        </defs>
+      </svg>
+
+      <!-- Diagram Canvas Container -->
+      <div id="diagramContainer" class="absolute inset-0 w-full h-full">
+        
+        <!-- VNet Outer Container -->
+        <div class="absolute left-[300px] top-[40px] w-[690px] h-[550px] rounded-2xl border-2 border-sky-500/30 bg-sky-950/10 p-4 pointer-events-none">
+          <div class="flex items-center justify-between border-b border-sky-500/20 pb-2 mb-3">
+            <div class="flex items-center space-x-2">
+              <span class="text-sky-400"><i class="fa-solid fa-network-wired"></i></span>
+              <span class="text-xs font-bold tracking-wider uppercase text-sky-300">Azure VNet: vnet-prod-eastus-01</span>
+            </div>
+            <span class="text-[11px] font-mono-code bg-sky-500/10 text-sky-300 px-2 py-0.5 rounded border border-sky-500/20">10.0.0.0/16</span>
+          </div>
+        </div>
+
+        <!-- Subnet 1: VNet Integration Subnet (Delegated) -->
+        <div class="absolute left-[320px] top-[95px] w-[650px] h-[130px] rounded-xl border border-dashed border-fuchsia-500/50 bg-fuchsia-950/10 p-3 pointer-events-none">
+          <div class="flex items-center justify-between border-b border-fuchsia-500/20 pb-1 mb-2">
+            <div class="flex items-center space-x-2">
+              <span class="text-fuchsia-400"><i class="fa-solid fa-right-to-bracket"></i></span>
+              <span class="text-xs font-semibold text-fuchsia-200">Subnet: snet-integration-01</span>
+              <span class="text-[9px] bg-fuchsia-500/20 text-fuchsia-300 px-1.5 py-0.5 rounded border border-fuchsia-500/30">Delegated: Microsoft.Web/serverFarms</span>
+            </div>
+            <span class="text-[10px] font-mono-code text-fuchsia-300">10.0.1.0/24</span>
+          </div>
+        </div>
+
+        <!-- Subnet 2: Workloads Subnet (NICs) -->
+        <div class="absolute left-[320px] top-[245px] w-[650px] h-[150px] rounded-xl border border-dashed border-sky-400/40 bg-slate-900/60 p-3 pointer-events-none">
+          <div class="flex items-center justify-between border-b border-slate-800 pb-1 mb-2">
+            <div class="flex items-center space-x-2">
+              <span class="text-sky-400"><i class="fa-solid fa-server"></i></span>
+              <span class="text-xs font-semibold text-slate-200">Subnet: snet-workloads-01</span>
+            </div>
+            <div class="flex items-center space-x-2">
+              <span class="text-[10px] font-mono-code text-slate-400">NSG: nsg-workloads</span>
+              <span class="text-[10px] font-mono-code text-sky-400 bg-slate-800 px-1.5 py-0.5 rounded">10.0.2.0/24</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Subnet 3: Private Endpoints Subnet -->
+        <div class="absolute left-[320px] top-[410px] w-[650px] h-[160px] rounded-xl border border-dashed border-emerald-400/40 bg-slate-900/60 p-3 pointer-events-none">
+          <div class="flex items-center justify-between border-b border-slate-800 pb-1 mb-2">
+            <div class="flex items-center space-x-2">
+              <span class="text-emerald-400"><i class="fa-solid fa-shield-halved"></i></span>
+              <span class="text-xs font-semibold text-slate-200">Subnet: snet-private-endpoints-01</span>
+            </div>
+            <div class="flex items-center space-x-2">
+              <span class="text-[10px] text-emerald-400/90 font-mono-code">PrivateEndpointNetworkPolicies: Enabled</span>
+              <span class="text-[10px] font-mono-code text-emerald-400 bg-slate-800 px-1.5 py-0.5 rounded">10.0.3.0/24</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Svelte Flow Dynamic Node Render Layer -->
+        <div id="nodesLayer" class="relative w-full h-full z-20"></div>
+
+      </div>
+    </div>
+
+    <aside id="detailsPanel" class="w-96 glass-azure border-l border-slate-800 p-6 flex flex-col justify-between absolute right-0 top-0 bottom-0 z-30 transform translate-x-full slide-panel opacity-0 pointer-events-none">
+      <div>
+        <div class="flex items-center justify-between border-b border-slate-800 pb-4 mb-4">
+          <div class="flex items-center space-x-2.5">
+            <span id="panelStatusBadge" class="h-3 w-3 rounded-full bg-emerald-400"></span>
+            <h2 id="panelNodeTitle" class="text-base font-semibold text-slate-100">Resource Inspector</h2>
+          </div>
+          <button id="btnClosePanel" class="text-slate-400 hover:text-slate-200 transition p-1.5 rounded-lg hover:bg-slate-800">
+            <i class="fa-solid fa-xmark text-lg"></i>
+          </button>
+        </div>
+
+        <!-- Detail Metadata Fields -->
+        <div class="space-y-4">
+          <div>
+            <label class="text-[10px] text-slate-400 uppercase tracking-wider font-semibold">Resource & Addressing</label>
+            <p id="panelResourceName" class="text-xs font-mono-code text-sky-300 mt-1 bg-slate-900/90 p-2.5 rounded-lg border border-slate-800 break-all">app-orders-api</p>
+          </div>
+
+          <div class="grid grid-cols-2 gap-2.5">
+            <div class="bg-slate-900/60 p-2.5 rounded-xl border border-slate-800">
+              <span class="text-[9px] text-slate-400 uppercase">Traffic Vector</span>
+              <p id="panelVectorType" class="text-xs font-medium text-fuchsia-300 mt-0.5 truncate">Outbound VNet Integration</p>
+            </div>
+            <div class="bg-slate-900/60 p-2.5 rounded-xl border border-slate-800">
+              <span class="text-[9px] text-slate-400 uppercase">Parent Subnet</span>
+              <p id="panelSubnetName" class="text-xs font-medium text-slate-200 mt-0.5 truncate">snet-integration-01</p>
+            </div>
+          </div>
+
+          <!-- Live Telemetry Stats -->
+          <div class="bg-slate-900/80 p-3.5 rounded-xl border border-slate-800 space-y-3">
+            <h3 class="text-xs font-semibold text-slate-300 uppercase tracking-wider flex items-center justify-between">
+              <span>Path Telemetry</span>
+              <span id="panelLiveStatusText" class="text-[10px] text-emerald-400 animate-pulse">● Path Active</span>
+            </h3>
+
+            <div>
+              <div class="flex justify-between text-xs mb-1">
+                <span class="text-slate-400">Active Rate</span>
+                <span id="panelThroughputVal" class="text-sky-400 font-mono-code">128 Mbps</span>
+              </div>
+              <div class="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                <div id="panelThroughputBar" class="bg-sky-400 h-full transition-all duration-500" style="width: 55%"></div>
+              </div>
+            </div>
+
+            <div>
+              <div class="flex justify-between text-xs mb-1">
+                <span class="text-slate-400">RTT Latency</span>
+                <span id="panelLatencyVal" class="text-sky-400 font-mono-code">2.1ms</span>
+              </div>
+              <div class="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                <div id="panelLatencyBar" class="bg-sky-400 h-full transition-all duration-500" style="width: 18%"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Active Routing Connections -->
+          <div>
+            <label class="text-[10px] text-slate-400 uppercase tracking-wider font-semibold mb-2 block">Active Topology Relationships</label>
+            <div id="panelRelationships" class="space-y-1.5 max-h-40 overflow-y-auto pr-1">
+              <!-- Dynamically populated -->
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="pt-3 border-t border-slate-800">
+        <button id="btnViewInPortal" class="w-full py-2 bg-sky-500/10 hover:bg-sky-500/20 border border-sky-500/30 text-sky-300 rounded-xl text-xs font-medium transition flex items-center justify-center space-x-2">
+          <span>View in Azure Portal</span>
+          <i class="fa-solid fa-arrow-up-right-from-square"></i>
+        </button>
+      </div>
+    </aside>
+
+  </div>
+
+  <script>
+    // Topology Node Definitions
+    const azureTopologyData = {
+      nodes: [
+        // Outbound App Service Source
+        {
+          id: 'app-service-01',
+          name: 'app-orders-api',
+          ip: 'Azure Web App (PaaS)',
+          type: 'Microsoft.Web/sites',
+          vector: 'outbound',
+          icon: 'fa-cloud-arrow-up',
+          status: 'healthy',
+          throughput: 210,
+          latency: 2.1,
+          x: 20,
+          y: 130,
+          subnet: 'External PaaS',
+          details: 'Outbound regional VNet integration enabled.'
+        },
+        // Delegated Subnet Integration Interface
+        {
+          id: 'vnet-int-interface',
+          name: 'vnet-integration-endpoint',
+          ip: '10.0.1.8',
+          type: 'Microsoft.Web/serverFarms/delegation',
+          vector: 'outbound',
+          icon: 'fa-right-to-bracket',
+          status: 'healthy',
+          throughput: 210,
+          latency: 0.8,
+          x: 340,
+          y: 140,
+          subnet: 'snet-integration-01',
+          details: 'Subnet delegated to App Service farm for outbound traffic injection.'
+        },
+        // Internal Workload VM NIC
+        {
+          id: 'nic-vm-01',
+          name: 'nic-orders-vm01',
+          ip: '10.0.2.10',
+          type: 'Microsoft.Network/networkInterfaces',
+          vector: 'internal',
+          icon: 'fa-ethernet',
+          status: 'healthy',
+          throughput: 85,
+          latency: 1.2,
+          x: 520,
+          y: 295,
+          subnet: 'snet-workloads-01',
+          attachedTo: 'vm-orders-backend-01'
+        },
+        // Private Endpoint Node inside Subnet
+        {
+          id: 'pe-sql-01',
+          name: 'pe-sqldb-primary',
+          ip: '10.0.3.15',
+          type: 'Microsoft.Network/privateEndpoints',
+          vector: 'privatelink',
+          icon: 'fa-shield-halved',
+          status: 'healthy',
+          throughput: 320,
+          latency: 1.5,
+          x: 520,
+          y: 460,
+          subnet: 'snet-private-endpoints-01',
+          fqdn: 'sqldb-orders-prod.privatelink.database.windows.net'
+        },
+        // Target External Azure SQL DB
+        {
+          id: 'sqldb-external',
+          name: 'sqldb-orders-prod (Azure SQL)',
+          ip: 'PaaS Private Link Endpoint',
+          type: 'Microsoft.Sql/servers/databases',
+          vector: 'privatelink',
+          icon: 'fa-database',
+          status: 'healthy',
+          throughput: 320,
+          latency: 1.9,
+          x: 1020,
+          y: 460,
+          isExternal: true,
+          subnet: 'External PaaS'
+        }
+      ],
+      edges: [
+        // App Service Outbound to Delegated Subnet
+        { id: 'e-app-delegation', source: 'app-service-01', target: 'vnet-int-interface', label: 'Outbound Swift Connection', type: 'fuchsia', category: 'outbound' },
+        
+        // VNet Integration routing internally to VM NIC
+        { id: 'e-int-vm', source: 'vnet-int-interface', target: 'nic-vm-01', label: 'HTTP / Port 8080', type: 'fuchsia', category: 'outbound' },
+        
+        // VNet Integration routing to Private Endpoint (Outbound PaaS access)
+        { id: 'e-int-pe', source: 'vnet-int-interface', target: 'pe-sql-01', label: 'SQL / Port 1433', type: 'fuchsia', category: 'outbound' },
+
+        // Internal VM NIC accessing Private Endpoint
+        { id: 'e-vm-pe', source: 'nic-vm-01', target: 'pe-sql-01', label: 'Port 1433', type: 'sky', category: 'internal' },
+        
+        // Private Endpoint to External PaaS Service
+        { id: 'e-pe-sqldb', source: 'pe-sql-01', target: 'sqldb-external', label: 'Private Link Tunnel', type: 'sky', category: 'privatelink' }
+      ]
+    };
+
+    // Global State Variables
+    let selectedNodeId = null;
+    let trafficSpeed = 1.0;
+    let incidentActive = false;
+    let activeFilter = 'all';
+
+    // Render nodes onto canvas
+    function renderNodes() {
+      const nodesLayer = document.getElementById('nodesLayer');
+      nodesLayer.innerHTML = '';
+
+      azureTopologyData.nodes.forEach(node => {
+        // Filter check
+        if (!isNodeVisible(node)) return;
+
+        const el = document.createElement('div');
+        el.id = `node-${node.id}`;
+        
+        const widthClass = node.isExternal ? 'w-64' : 'w-56';
+        const bgStyle = getNodeStyleClass(node);
+        
+        el.className = `absolute z-20 ${widthClass} rounded-xl p-3 border cursor-pointer hover:border-sky-300 transition-all ${bgStyle}`;
+        el.style.transform = `translate(${node.x}px, ${node.y}px)`;
+
+        el.innerHTML = `
+          <!-- Pulsing Halo for Warnings/Alerts -->
+          <div class="absolute -inset-1 rounded-xl pointer-events-none ${getPulseClass(node.status)}"></div>
+
+          <div class="relative z-10 flex items-center justify-between">
+            <div class="flex items-center space-x-2.5 truncate">
+              <div class="h-8 w-8 rounded-lg bg-slate-950 border ${getIconBorder(node)} flex items-center justify-center shrink-0">
+                <i class="fa-solid ${node.icon} ${getIconColor(node)} text-xs"></i>
+              </div>
+              <div class="truncate">
+                <h3 class="text-xs font-semibold text-slate-100 truncate">${node.name}</h3>
+                <span class="text-[10px] font-mono-code text-slate-400 block truncate">${node.ip}</span>
+              </div>
+            </div>
+            <div class="h-2.5 w-2.5 rounded-full ${getStatusDotClass(node.status)} shrink-0"></div>
+          </div>
+        `;
+
+        el.addEventListener('click', (e) => {
+          e.stopPropagation();
+          selectNode(node);
+        });
+
+        nodesLayer.appendChild(el);
+      });
+
+      renderEdges();
+    }
+
+    function renderEdges() {
+      const svg = document.getElementById('svgOverlay');
+      const defs = svg.querySelector('defs');
+      svg.innerHTML = '';
+      svg.appendChild(defs);
+
+      azureTopologyData.edges.forEach((edge) => {
+        // Filter visibility
+        if (!isEdgeVisible(edge)) return;
+
+        const src = azureTopologyData.nodes.find(n => n.id === edge.source);
+        const tgt = azureTopologyData.nodes.find(n => n.id === edge.target);
+
+        if (!src || !tgt) return;
+
+        const srcWidth = src.isExternal ? 256 : 224;
+        const srcX = src.x + srcWidth;
+        const srcY = src.y + 26;
+        const tgtX = tgt.x;
+        const tgtY = tgt.y + 26;
+
+        // Curve Calculation
+        const dx = Math.abs(tgtX - srcX) * 0.45;
+        const pathData = `M ${srcX} ${srcY} C ${srcX + dx} ${srcY}, ${tgtX - dx} ${tgtY}, ${tgtX} ${tgtY}`;
+
+        // Base Static Line
+        const baseLine = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        baseLine.setAttribute('d', pathData);
+        baseLine.setAttribute('fill', 'none');
+        baseLine.setAttribute('stroke', getEdgeColor(edge.type, false));
+        baseLine.setAttribute('stroke-width', '2');
+        baseLine.setAttribute('opacity', '0.25');
+
+        // Flowing Animated Line
+        const animLine = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        animLine.setAttribute('d', pathData);
+        animLine.setAttribute('fill', 'none');
+        animLine.setAttribute('stroke', getEdgeColor(edge.type, true));
+        animLine.setAttribute('stroke-width', '2');
+        animLine.setAttribute('class', 'edge-animated');
+        animLine.setAttribute('marker-end', `url(#arrow-${edge.type})`);
+        animLine.style.animationDuration = `${2.4 / trafficSpeed}s`;
+
+        svg.appendChild(baseLine);
+        svg.appendChild(animLine);
+      });
+    }
+
+    // Helper visibility filters
+    function isNodeVisible(node) {
+      if (activeFilter === 'all') return true;
+      if (activeFilter === 'outbound') return node.vector === 'outbound' || node.id === 'nic-vm-01' || node.id === 'pe-sql-01';
+      if (activeFilter === 'privatelink') return node.vector === 'privatelink' || node.id === 'nic-vm-01' || node.id === 'vnet-int-interface';
+      return true;
+    }
+
+    function isEdgeVisible(edge) {
+      if (activeFilter === 'all') return true;
+      if (activeFilter === 'outbound') return edge.category === 'outbound';
+      if (activeFilter === 'privatelink') return edge.category === 'privatelink' || edge.category === 'internal';
+      return true;
+    }
+
+    // Styling Helpers
+    function getNodeStyleClass(node) {
+      if (node.status === 'warning') return 'border-amber-500/60 bg-amber-950/30 shadow-lg shadow-amber-500/10';
+      if (node.status === 'error') return 'border-red-500/60 bg-red-950/30 shadow-lg shadow-red-500/10';
+      if (node.vector === 'outbound') return 'glass-integration border-fuchsia-500/40 glow-appservice';
+      return 'glass-azure border-slate-800';
+    }
+
+    function getPulseClass(status) {
+      if (status === 'warning') return 'node-pulse-warning border border-amber-500/50';
+      if (status === 'error') return 'node-pulse-error border border-red-500/60';
+      return 'hidden';
+    }
+
+    function getStatusDotClass(status) {
+      if (status === 'warning') return 'bg-amber-400 shadow-sm shadow-amber-400';
+      if (status === 'error') return 'bg-red-500 shadow-sm shadow-red-500';
+      return 'bg-emerald-400 shadow-sm shadow-emerald-400';
+    }
+
+    function getIconBorder(node) {
+      if (node.vector === 'outbound') return 'border-fuchsia-500/40';
+      return 'border-slate-700';
+    }
+
+    function getIconColor(node) {
+      if (node.vector === 'outbound') return 'text-fuchsia-400';
+      if (node.id === 'pe-sql-01') return 'text-emerald-400';
+      return 'text-sky-400';
+    }
+
+    function getEdgeColor(type, highlight) {
+      if (type === 'fuchsia') return highlight ? '#d946ef' : '#701a75';
+      if (type === 'amber') return highlight ? '#f59e0b' : '#78350f';
+      if (type === 'red') return highlight ? '#ef4444' : '#7f1d1d';
+      return highlight ? '#38bdf8' : '#0369a1';
+    }
+
+    // Inspect Node Selection
+    function selectNode(node) {
+      selectedNodeId = node.id;
+      const panel = document.getElementById('detailsPanel');
+
+      document.getElementById('panelNodeTitle').innerText = node.name;
+      document.getElementById('panelResourceName').innerText = `${node.name}\n${node.ip}`;
+      document.getElementById('panelSubnetName').innerText = node.subnet;
+      
+      const vectorEl = document.getElementById('panelVectorType');
+      if (node.vector === 'outbound') {
+        vectorEl.innerText = 'Outbound VNet Integration';
+        vectorEl.className = 'text-xs font-medium text-fuchsia-300 mt-0.5 truncate';
+      } else if (node.vector === 'privatelink') {
+        vectorEl.innerText = 'Inbound Private Link';
+        vectorEl.className = 'text-xs font-medium text-emerald-300 mt-0.5 truncate';
+      } else {
+        vectorEl.innerText = 'Subnet Workload';
+        vectorEl.className = 'text-xs font-medium text-sky-300 mt-0.5 truncate';
+      }
+
+      // Metrics update
+      document.getElementById('panelThroughputVal').innerText = `${node.throughput} Mbps`;
+      document.getElementById('panelThroughputBar').style.width = `${Math.min(node.throughput / 4, 100)}%`;
+      document.getElementById('panelLatencyVal').innerText = `${node.latency}ms`;
+      document.getElementById('panelLatencyBar').style.width = `${Math.min(node.latency * 3, 100)}%`;
+
+      const liveText = document.getElementById('panelLiveStatusText');
+      const statusBadge = document.getElementById('panelStatusBadge');
+      statusBadge.className = `h-3 w-3 rounded-full ${getStatusDotClass(node.status)}`;
+
+      if (node.status === 'warning') {
+        liveText.innerText = '● NSG Throttled Path';
+        liveText.className = 'text-[10px] text-amber-400 animate-pulse';
+      } else {
+        liveText.innerText = '● Path Healthy';
+        liveText.className = 'text-[10px] text-emerald-400 animate-pulse';
+      }
+
+      // Dependencies List
+      const relContainer = document.getElementById('panelRelationships');
+      relContainer.innerHTML = '';
+
+      const outgoing = azureTopologyData.edges.filter(e => e.source === node.id);
+      const incoming = azureTopologyData.edges.filter(e => e.target === node.id);
+
+      [...outgoing, ...incoming].forEach(edge => {
+        const isOut = edge.source === node.id;
+        const peer = azureTopologyData.nodes.find(n => n.id === (isOut ? edge.target : edge.source));
+        
+        const item = document.createElement('div');
+        item.className = 'flex items-center justify-between p-2 rounded-lg bg-slate-900/90 border border-slate-800 text-xs';
+        item.innerHTML = `
+          <span class="text-slate-400 font-mono-code text-[10px]">${isOut ? '→ OUT' : '← IN'}</span>
+          <span class="font-medium text-slate-200 truncate ml-2">${peer ? peer.name : 'Target'}</span>
+        `;
+        relContainer.appendChild(item);
+      });
+
+      panel.classList.remove('translate-x-full', 'opacity-0', 'pointer-events-none');
+    }
+
+    function closePanel() {
+      const panel = document.getElementById('detailsPanel');
+      panel.classList.add('translate-x-full', 'opacity-0', 'pointer-events-none');
+      selectedNodeId = null;
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      renderNodes();
+
+      document.getElementById('viewport').addEventListener('click', closePanel);
+      document.getElementById('btnClosePanel').addEventListener('click', closePanel);
+
+      // Speed Slider Listener
+      document.getElementById('speedSlider').addEventListener('input', (e) => {
+        trafficSpeed = parseFloat(e.target.value);
+        document.getElementById('speedValue').innerText = `${trafficSpeed.toFixed(1)}x`;
+        renderEdges();
+      });
+
+      // Filter Buttons
+      const filterBtns = document.querySelectorAll('.filter-btn');
+      filterBtns.forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          filterBtns.forEach(b => {
+            b.className = 'filter-btn px-3 py-1 rounded-lg text-slate-400 hover:text-slate-200 transition';
+          });
+          e.target.className = 'filter-btn px-3 py-1 rounded-lg bg-sky-500/20 text-sky-300 font-medium border border-sky-500/30';
+
+          if (e.target.id === 'filterOutbound') activeFilter = 'outbound';
+          else if (e.target.id === 'filterPrivateLink') activeFilter = 'privatelink';
+          else activeFilter = 'all';
+
+          renderNodes();
+        });
+      });
+
+      // Incident Simulation Button
+      document.getElementById('btnToggleIncident').addEventListener('click', () => {
+        incidentActive = !incidentActive;
+        const vnetIntNode = azureTopologyData.nodes.find(n => n.id === 'vnet-int-interface');
+        const peNode = azureTopologyData.nodes.find(n => n.id === 'pe-sql-01');
+        const edgeIntPe = azureTopologyData.edges.find(e => e.id === 'e-int-pe');
+
+        if (incidentActive) {
+          vnetIntNode.status = 'warning';
+          vnetIntNode.latency = 34.2;
+          peNode.status = 'warning';
+          if (edgeIntPe) edgeIntPe.type = 'amber';
+        } else {
+          vnetIntNode.status = 'healthy';
+          vnetIntNode.latency = 0.8;
+          peNode.status = 'healthy';
+          if (edgeIntPe) edgeIntPe.type = 'fuchsia';
+        }
+
+        renderNodes();
+        if (selectedNodeId === 'vnet-int-interface') selectNode(vnetIntNode);
+      });
+
+      // Reset Button
+      document.getElementById('btnReset').addEventListener('click', () => {
+        incidentActive = false;
+        activeFilter = 'all';
+        azureTopologyData.nodes.forEach(n => {
+          n.status = 'healthy';
+          if (n.id === 'vnet-int-interface') n.latency = 0.8;
+        });
+        azureTopologyData.edges.find(e => e.id === 'e-int-pe').type = 'fuchsia';
+        renderNodes();
+        closePanel();
+      });
+    });
+  </script>
+</body>
+</html>

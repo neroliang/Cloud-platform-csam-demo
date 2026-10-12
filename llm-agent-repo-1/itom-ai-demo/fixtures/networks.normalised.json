@@ -1,0 +1,153 @@
+{
+  "metadata": {
+    "source": "Legacy Azure VNet-integration export (fixtures/networks.js, extracted from azure_vnet_impact_topology.html)",
+    "provider": "azure",
+    "environment": "Production",
+    "generated_at": "2026-11-10T00:00:00Z"
+  },
+  "graph_nodes": [
+    {
+      "id": "snet-integration-01",
+      "labels": ["Subnet"],
+      "properties": {
+        "name": "snet-integration-01"
+      }
+    },
+    {
+      "id": "snet-workloads-01",
+      "labels": ["Subnet"],
+      "properties": {
+        "name": "snet-workloads-01"
+      }
+    },
+    {
+      "id": "snet-private-endpoints-01",
+      "labels": ["Subnet"],
+      "properties": {
+        "name": "snet-private-endpoints-01"
+      }
+    },
+    {
+      "id": "app-service-01",
+      "labels": ["ConfigurationItem"],
+      "properties": {
+        "name": "app-orders-api",
+        "resource_type": "Microsoft.Web/sites",
+        "icon": "fa-cloud-arrow-up",
+        "status": "healthy",
+        "metrics": { "throughput_mbps": 210, "latency_ms": 2.1 },
+        "details": "Outbound regional VNet integration enabled."
+      }
+    },
+    {
+      "id": "vnet-int-interface",
+      "labels": ["ConfigurationItem"],
+      "properties": {
+        "name": "vnet-integration-endpoint",
+        "resource_type": "Microsoft.Web/serverFarms/delegation",
+        "icon": "fa-right-to-bracket",
+        "status": "healthy",
+        "ip": "10.0.1.8",
+        "metrics": { "throughput_mbps": 210, "latency_ms": 0.8 },
+        "details": "Subnet delegated to App Service farm for outbound traffic injection."
+      },
+      "parent": "snet-integration-01"
+    },
+    {
+      "id": "nic-vm-01",
+      "labels": ["ConfigurationItem"],
+      "properties": {
+        "name": "nic-orders-vm01",
+        "resource_type": "Microsoft.Network/networkInterfaces",
+        "icon": "fa-ethernet",
+        "status": "healthy",
+        "ip": "10.0.2.10",
+        "metrics": { "throughput_mbps": 85, "latency_ms": 1.2 },
+        "details": "Attachment vm-orders-backend-01 is absent from this export, so no host relationship is emitted."
+      },
+      "parent": "snet-workloads-01"
+    },
+    {
+      "id": "pe-sql-01",
+      "labels": ["ConfigurationItem"],
+      "properties": {
+        "name": "pe-sqldb-primary",
+        "resource_type": "Microsoft.Network/privateEndpoints",
+        "icon": "fa-shield-halved",
+        "status": "healthy",
+        "ip": "10.0.3.15",
+        "fqdn": "sqldb-orders-prod.privatelink.database.windows.net",
+        "metrics": { "throughput_mbps": 320, "latency_ms": 1.5 }
+      },
+      "parent": "snet-private-endpoints-01"
+    },
+    {
+      "id": "sqldb-external",
+      "labels": ["ConfigurationItem"],
+      "properties": {
+        "name": "sqldb-orders-prod (Azure SQL)",
+        "resource_type": "Microsoft.Sql/servers/databases",
+        "icon": "fa-database",
+        "status": "healthy",
+        "metrics": { "throughput_mbps": 320, "latency_ms": 1.9 },
+        "details": "Out-of-VNet PaaS endpoint. The legacy export flagged it as external and used the sentinel subnet \"External PaaS\", so it has no parent container."
+      }
+    }
+  ],
+  "graph_relationships": [
+    {
+      "id": "e-app-delegation",
+      "source": "app-service-01",
+      "target": "vnet-int-interface",
+      "type": "SENDS_TRAFFIC_TO",
+      "properties": {
+        "protocol": "Outbound Swift Connection",
+        "category": "traffic",
+        "traffic_rate": "high"
+      }
+    },
+    {
+      "id": "e-int-vm",
+      "source": "vnet-int-interface",
+      "target": "nic-vm-01",
+      "type": "ROUTES_TO",
+      "properties": {
+        "protocol": "HTTP/8080",
+        "category": "traffic",
+        "traffic_rate": "high"
+      }
+    },
+    {
+      "id": "e-int-pe",
+      "source": "vnet-int-interface",
+      "target": "pe-sql-01",
+      "type": "ROUTES_TO",
+      "properties": {
+        "protocol": "TCP/1433",
+        "category": "traffic",
+        "traffic_rate": "medium"
+      }
+    },
+    {
+      "id": "e-vm-pe",
+      "source": "nic-vm-01",
+      "target": "pe-sql-01",
+      "type": "DEPENDS_ON",
+      "properties": {
+        "protocol": "TCP/1433",
+        "category": "dependency",
+        "traffic_rate": "medium"
+      }
+    },
+    {
+      "id": "e-pe-sqldb",
+      "source": "pe-sql-01",
+      "target": "sqldb-external",
+      "type": "PRIVATE_LINK",
+      "properties": {
+        "protocol": "Private Link Tunnel",
+        "category": "secure"
+      }
+    }
+  ]
+}
