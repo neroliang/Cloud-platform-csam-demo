@@ -15,9 +15,10 @@ LIMIT $limit
 '''
 
 with driver.session(database="neo4j") as session:
-  results = session.read_transaction(
-    lambda tx: tx.run(cypher_query,
-                      limit=20).data())
+  # FIX: Changed read_transaction to execute_read
+  results = session.execute_read(
+    lambda tx: tx.run(cypher_query, limit=20).data()
+  )
   for record in results:
     print(record['count'])
 
